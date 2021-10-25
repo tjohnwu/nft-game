@@ -8,7 +8,11 @@ const main = async () => {
       "https://lh3.googleusercontent.com/BKcPTjxdZN6h4c9OZukmCJywdxJCj9qdnnp-wU_5BOSnrgh_vuoRSTL-bGntKFWErKE2EJCrgWly0sKaJ-j3jeexrlf3_0vHApU1JQ=w600",
     ],
     [75, 200, 500], // HP values
-    [100, 50, 10] // Attack damage values
+    [100, 50, 10], // Attack damage values
+    "Simpson Cat",
+    "https://lh3.googleusercontent.com/z-J8pzExqnbXK1eYYbJudfwzWgSotbbpuwBPRp3mgeJqBnRQKeN49yHp57HF7z7-Zc-UZa620U4xKppMh2YzS-kVFDdlfj6az9bi=w600",
+    5000,
+    100
   );
   await gameContract.deployed();
   console.log("Contract deployed to:", gameContract.address);
@@ -19,9 +23,14 @@ const main = async () => {
   txn = await gameContract.mintCharacterNFT(2);
   await txn.wait();
 
+  txn = await gameContract.attackBoss();
+  await txn.wait();
+  txn = await gameContract.attackBoss();
+  await txn.wait();
+
   // Get the value of the NFT's URI.
-  let returnedTokenUri = await gameContract.tokenURI(1);
-  console.log("Token URI:", returnedTokenUri);
+  //let returnedTokenUri = await gameContract.tokenURI(1);
+  //console.log("Token URI:", returnedTokenUri);
 };
 
 const runMain = async () => {
