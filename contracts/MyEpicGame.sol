@@ -32,21 +32,57 @@ contract MyEpicGame is ERC721 {
     // We create a mapping from the nft's tokenId => that NFTs attributes.
     mapping(uint256 => CharacterAttributes) public nftHolderAttributes;
 
+    struct BigCat {
+        string name;
+        string imageURI;
+        uint256 hp;
+        uint256 maxHp;
+        uint256 attackDamage;
+    }
+
+    BigCat public bigCat;
+
     // A mapping from an address => the NFTs tokenId. Gives me an ez way
     // to store the owner of the NFT and reference it later.
     mapping(address => uint256) public nftHolders;
+
+    event CharacterNFTMinted(
+        address sender,
+        uint256 tokenId,
+        uint256 characterIndex
+    );
+    event AttackComplete(uint256 newBigCatHp, uint256 newPlayerHp);
 
     constructor(
         string[] memory characterNames,
         string[] memory characterImageURIs,
         uint256[] memory characterHp,
-        uint256[] memory characterAttackDmg
+        uint256[] memory characterAttackDmg,
+        string memory bigCatName, // These new variables would be passed in via run.js or deploy.js.
+        string memory bigCatImageURI,
+        uint256 bigCatHp,
+        uint256 bigCatAttackDamage
     )
         // Below, you can also see I added some special identifier symbols for our NFT.
         // This is the name and symbol for our token, ex Ethereum and ETH. I just call mine
         // Heroes and HERO. Remember, an NFT is just a token!
         ERC721("Cat Warrior", "CATW")
     {
+        // Initialize the boss. Save it to our global "bigBoss" state variable.
+        bigCat = BigCat({
+            name: bigCatName,
+            imageURI: bigCatImageURI,
+            hp: bigCatHp,
+            maxHp: bigCatHp,
+            attackDamage: bigCatAttackDamage
+        });
+
+        console.log(
+            "Done initializing big cat %s w/ HP %s, img %s",
+            bigCat.name,
+            bigCat.hp,
+            bigCat.imageURI
+        );
         for (uint256 i = 0; i < characterNames.length; i += 1) {
             defaultCharacters.push(
                 CharacterAttributes({
@@ -71,6 +107,79 @@ contract MyEpicGame is ERC721 {
         // I increment tokenIds here so that my first NFT has an ID of 1.
         // More on this in the lesson!
         _tokenIds.increment();
+    }
+
+    function checkIfUserHasNFT()
+        public
+        view
+        returns (CharacterAttributes memory)
+    {
+        // Get the tokenId of the user's character NFT
+        uint256 userNftTokenId = nftHolders[msg.sender];
+        // If the user has a tokenId in the map, return thier character.
+        if (userNftTokenId > 0) {
+            return nftHolderAttributes[userNftTokenId];
+        }
+        // Else, return an empty character.
+        else {
+            CharacterAttributes memory emptyStruct;
+            return emptyStruct;
+        }
+    }
+
+    function getAllDefaultCharacters()
+        public
+        view
+        returns (CharacterAttributes[] memory)
+    {
+        return defaultCharacters;
+    }
+
+    function getBigCat() public view returns (BigCat memory) {
+        return bigCat;
+    }
+
+    function attackBoss() public {
+        // Get the state of the player's NFT.
+        uint256 nftTokenIdOfPlayer = nftHolders[msg.sender];
+        CharacterAttributes storage player = nftHolderAttributes[
+            nftTokenIdOfPlayer
+        ];
+        console.log(
+            "\nPlayer w/ character %s about to attack. Has %s HP and %s AD",
+            player.name,
+            player.hp,
+            player.attackDamage
+        );
+        console.log(
+            "Big cat %s has %s HP and %s AD",
+            bigCat.name,
+            bigCat.hp,
+            bigCat.attackDamage
+        );
+        // Make sure the player has more than 0 HP.
+        require(player.hp > 0, "Error: character must have HP to attack boss.");
+
+        // Make sure the boss has more than 0 HP.
+        require(bigCat.hp > 0, "Error: boss must have HP to attack boss.");
+
+        // Allow player to attack boss.
+        if (bigCat.hp < player.attackDamage) {
+            bigCat.hp = 0;
+        } else {
+            bigCat.hp = bigCat.hp - player.attackDamage;
+        }
+
+        // Allow boss to attack player.
+        if (player.hp < bigCat.attackDamage) {
+            player.hp = 0;
+        } else {
+            player.hp = player.hp - bigCat.attackDamage;
+        }
+
+        // Console for ease.
+        console.log("Big Cat attacked player. New player hp: %s\n", player.hp);
+        emit AttackComplete(bigCat.hp, player.hp);
     }
 
     // Users would be able to hit this function and get their NFT based on the
@@ -104,6 +213,8 @@ contract MyEpicGame is ERC721 {
 
         // Increment the tokenId for the next person that uses it.
         _tokenIds.increment();
+
+        emit CharacterNFTMinted(msg.sender, newItemId, _characterIndex);
     }
 
     function tokenURI(uint256 _tokenId)
